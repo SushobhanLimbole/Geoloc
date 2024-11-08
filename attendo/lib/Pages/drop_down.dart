@@ -1,5 +1,6 @@
 import 'package:attendo/Pages/Verification.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class BottomSheetContent extends StatefulWidget {
   const BottomSheetContent({super.key});
@@ -38,21 +39,20 @@ class _BottomSheetContentState extends State<BottomSheetContent> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
+            Text(
               'Reason For Manual Attendance',
-              style: TextStyle(fontSize: 20),
+              style: GoogleFonts.poppins(fontSize: 20),
             ),
             const SizedBox(height: 20),
             DropdownButtonFormField<String>(
               decoration: InputDecoration(
                   labelText: "Select Reason",
-                  enabledBorder: OutlineInputBorder(),
-                  focusedBorder: OutlineInputBorder()),
+                 ),
               value: selectedReason,
               items: reasons.map((reason) {
                 return DropdownMenuItem<String>(
                   value: reason,
-                  child: Text(reason),
+                  child: Text(reason,style: GoogleFonts.poppins(),),
                 );
               }).toList(),
               onChanged: (value) {
@@ -69,9 +69,7 @@ class _BottomSheetContentState extends State<BottomSheetContent> {
                 maxLines: 5,
                 decoration: InputDecoration(
                   labelText: 'Specify Reason',
-                  border: OutlineInputBorder(),
-                  enabledBorder: OutlineInputBorder(),
-                  focusedBorder: OutlineInputBorder(),
+                  
                 ),
               ),
             ],
@@ -95,13 +93,12 @@ class _BottomSheetContentState extends State<BottomSheetContent> {
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 12),
+                    
                     
                   ),
-                  child: const Text(
+                  child:  Text(
                     'Submit',
-                    style: TextStyle(
+                    style: GoogleFonts.poppins(
                       color: Colors.white,
                       // fontSize: 16,
                     ),
@@ -109,17 +106,21 @@ class _BottomSheetContentState extends State<BottomSheetContent> {
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    Navigator.pop(context); // Close the bottom sheet
+                    // Navigator.pop(context); // Close the bottom sheet
+                    // Navigator.push(
+                    //     context,
+                    //     MaterialPageRoute(
+                    //       builder: (context) => GeofenceExample(),
+                    //     ));
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 12),
+                    
                    
                   ),
-                  child: const Text(
+                  child: Text(
                     'Cancel',
-                    style: TextStyle(
+                    style: GoogleFonts.poppins(
                       color: Colors.white,
                       // fontSize: 16,
                     ),

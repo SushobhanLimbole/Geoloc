@@ -1,4 +1,6 @@
+import 'package:attendo/Constants.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class VerificationPage extends StatefulWidget {
   const VerificationPage({super.key});
@@ -14,7 +16,7 @@ class _VerificationPageState extends State<VerificationPage> {
       "email": "rohit@gmail.com",
       "timestamp": "2024-10-27 09:45:32",
       "date": "2024-10-27",
-      "reason": "Working Outside Office Location Working Outside Office Location Working Outside Office Location Working Outside Office Location Working Outside Office Location Working Outside Office Location Working Outside Office Location Working Outside Office Location Working Outside Office Location Working Outside Office Location",
+      "reason": "Working Outside Office Location",
     },
     {
       "name": "JP",
@@ -49,11 +51,11 @@ class _VerificationPageState extends State<VerificationPage> {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          title: const Text(
+          title: Text(
             "Employee Requests",
-            style: TextStyle(color: Colors.white),
+            style: GoogleFonts.poppins(),
           ),
-          backgroundColor: Colors.green[800],
+          // backgroundColor: Colors.green[800],
         ),
         body: Padding(
           padding: const EdgeInsets.all(16),
@@ -61,17 +63,17 @@ class _VerificationPageState extends State<VerificationPage> {
             children: [
               // Search bar with rounded corners
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                // padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade200,
                   borderRadius: BorderRadius.circular(30),
                 ),
                 child: TextField(
                   onChanged: updateSearchQuery,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
+                    prefixIcon: Icon(Icons.search, color: Colors.grey),
                     hintText: 'Search employee by name',
                     border: InputBorder.none,
-                    icon: Icon(Icons.search, color: Colors.grey),
                   ),
                 ),
               ),
@@ -108,10 +110,9 @@ class _VerificationPageState extends State<VerificationPage> {
                                   children: [
                                     // Profile icon placeholder
                                     CircleAvatar(
-                                      backgroundColor: const Color.fromARGB(
-                                          255, 169, 236, 164),
+                                      backgroundColor: primaryColor,
                                       child: const Icon(Icons.person,
-                                          color: Colors.green),
+                                          color: secondaryColor),
                                       radius: 28,
                                     ),
                                     const SizedBox(width: 16),
@@ -122,16 +123,16 @@ class _VerificationPageState extends State<VerificationPage> {
                                         children: [
                                           Text(
                                             request["name"]!,
-                                            style: const TextStyle(
+                                            style: GoogleFonts.poppins(
                                               fontSize: 18,
-                                              fontWeight: FontWeight.bold,
-                                              color: Color(0xFF388E3C),
+                                              fontWeight: FontWeight.w500,
+                                              color: secondaryColor,
                                             ),
                                           ),
                                           const SizedBox(height: 4),
                                           Text(
                                             request["email"]!,
-                                            style: const TextStyle(
+                                            style: GoogleFonts.poppins(
                                               fontSize: 14,
                                               color: Colors.black87,
                                             ),
@@ -140,7 +141,7 @@ class _VerificationPageState extends State<VerificationPage> {
                                           const SizedBox(height: 8),
                                           Text(
                                             "Timestamp: ${request["timestamp"]}",
-                                            style: const TextStyle(
+                                            style: GoogleFonts.poppins(
                                               fontSize: 12,
                                               color: Colors.black54,
                                             ),
@@ -151,7 +152,7 @@ class _VerificationPageState extends State<VerificationPage> {
                                     const Icon(
                                       Icons.arrow_forward_ios,
                                       size: 16,
-                                      color: Colors.green,
+                                      color: secondaryColor,
                                     ),
                                   ],
                                 ),
@@ -219,10 +220,10 @@ void showRequestDetails(BuildContext context, Map<String, String> request) {
                 Text(
                   request["name"] ?? "N/A",
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: GoogleFonts.poppins(
                     fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF388E3C),
+                    fontWeight: FontWeight.w500,
+                    color: secondaryColor,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -246,19 +247,19 @@ void showRequestDetails(BuildContext context, Map<String, String> request) {
                         onPressed: () {
                           Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Request Accepted')),
+                            SnackBar(content: Text('Request Accepted',style: GoogleFonts.poppins(),)),
                           );
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
+                          // padding: const EdgeInsets.symmetric(vertical: 14),
+                          // shape: RoundedRectangleBorder(
+                          //     borderRadius: BorderRadius.circular(10)),
                         ),
-                        child: const Text(
+                        child: Text(
                           "Accept",
-                          style: TextStyle(
-                              color: Colors.white, fontWeight: FontWeight.bold),
+                          style: GoogleFonts.poppins(
+                              color: Colors.white),
                         ),
                       ),
                     ),
@@ -271,14 +272,14 @@ void showRequestDetails(BuildContext context, Map<String, String> request) {
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
+                          // padding: const EdgeInsets.symmetric(vertical: 14),
+                          // shape: RoundedRectangleBorder(
+                          //     borderRadius: BorderRadius.circular(10)),
                         ),
-                        child: const Text(
+                        child: Text(
                           "Decline",
-                          style: TextStyle(
-                              color: Colors.white, fontWeight: FontWeight.bold),
+                          style: GoogleFonts.poppins(
+                              color: Colors.white),
                         ),
                       ),
                     ),
@@ -298,26 +299,26 @@ void _showConfirmationDialog(BuildContext context) {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Are you sure?'),
-          content: const Text(
-              'Are you sure you want to decline this manual attendance request?'),
+          title: Text('Are you sure?',style: GoogleFonts.poppins(),),
+          content: Text(
+              'Are you sure you want to decline this manual attendance request?',style: GoogleFonts.poppins(),),
           actions: <Widget>[
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Request Declined')),
+                  SnackBar(content: Text('Request Declined',style: GoogleFonts.poppins(),)),
                 );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
+                // padding: const EdgeInsets.symmetric(vertical: 14),
+                // shape: RoundedRectangleBorder(
+                //     borderRadius: BorderRadius.circular(10)),
               ),
-              child: const Text(
+              child: Text(
                 "Yes",
-                style: TextStyle(color: Colors.white),
+                style: GoogleFonts.poppins(color: Colors.white),
               ),
             ),
             ElevatedButton(
@@ -326,13 +327,13 @@ void _showConfirmationDialog(BuildContext context) {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
+                // padding: const EdgeInsets.symmetric(vertical: 14),
+                // shape: RoundedRectangleBorder(
+                //     borderRadius: BorderRadius.circular(10)),
               ),
-              child: const Text(
+              child: Text(
                 "No",
-                style: TextStyle(color: Colors.white),
+                style: GoogleFonts.poppins(color: Colors.white),
               ),
             ),
           ],
@@ -347,8 +348,8 @@ void _showConfirmationDialog(BuildContext context) {
 Widget _detailTile(IconData icon, String label, String content) {
   return ListTile(
     contentPadding: const EdgeInsets.symmetric(vertical: 5),
-    leading: Icon(icon, color: Colors.green[700]),
-    title: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
-    subtitle: Text(content, style: const TextStyle(color: Colors.black54)),
+    leading: Icon(icon, color: secondaryColor,),
+    title: Text(label, style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
+    subtitle: Text(content, style: GoogleFonts.poppins(color: Colors.black54)),
   );
 }

@@ -1,5 +1,7 @@
-import 'package:attendo/Pages/Demo.dart';
-import 'package:attendo/Pages/MapDemoPage.dart';
+import 'package:attendo/Pages/AttendanceMap.dart';
+import 'package:attendo/Pages/SignUpPage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -18,11 +20,109 @@ class _SignInPageState extends State<SignInPage> {
   final TextEditingController confirmPasswordController =
       TextEditingController();
 
-  final List<String> roles = ['Admin', 'Employee'];
+  final List<String> roles = ['admin', 'employee'];
 
   String? selectedRole;
 
   bool _isPasswordVisible = true;
+
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  Future<void> _trySubmit() async {
+  final isValid = _formKey.currentState?.validate();
+  if (isValid ?? false) {
+    _formKey.currentState?.save();
+
+    // Show loading SnackBar
+    final loadingSnackBar = SnackBar(
+      content: Row(
+        children: [
+          CircularProgressIndicator(),
+          SizedBox(width: 16),
+          Text('Checking user role, please wait...'),
+        ],
+      ),
+      duration: Duration(seconds: 5),
+    );
+    ScaffoldMessenger.of(context).showSnackBar(loadingSnackBar);
+
+    try {
+      // Fetch the user document from Firestore based on the email
+      QuerySnapshot userSnapshot = await FirebaseFirestore.instance
+          .collection('Users')
+          .where('email', isEqualTo: emailController.text.trim())
+          .limit(1)
+          .get();
+
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+      if (userSnapshot.docs.isNotEmpty) {
+        // Retrieve the first user document
+        DocumentSnapshot userDoc = userSnapshot.docs.first;
+        String userRole = userDoc['role'] ?? 'employee';
+
+        if (userRole == selectedRole) {
+          // Role is valid, proceed with login
+          User? user = await _auth
+              .signInWithEmailAndPassword(
+                email: emailController.text.trim(),
+                password: passwordController.text.trim(),
+              )
+              .then((value) => value.user);
+
+          if (user != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('User logged in successfully.')),
+            );
+
+            // Navigate to the MapDemoPage after successful login
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => AttendanceMap(
+                  isAdmin: userRole == 'admin',
+                  userName: userDoc['userName'],
+                  userEmail: emailController.text.trim(),
+                ),
+              ),
+            );
+          }
+        } else {
+          // If the role doesn't match, show an error
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Role does not match.')),
+          );
+        }
+      } else {
+        // If no user is found with the provided email
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('User not found.')),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+      String message = 'An error occurred, please check your credentials!';
+      if (e.code == 'user-not-found') {
+        message = 'No user found for that email.';
+      } else if (e.code == 'wrong-password') {
+        message = 'Wrong password provided for that user.';
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('An unexpected error occurred.'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    }
+  }
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -163,6 +263,22 @@ class _SignInPageState extends State<SignInPage> {
                 ),
                 const SizedBox(height: 25.0),
 
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text("Don't have an account? ",style: GoogleFonts.poppins(
+                      color: Colors.grey,
+                      fontWeight: FontWeight.w500),),
+                    GestureDetector(
+                      onTap: () => Navigator.push(context,MaterialPageRoute(builder: (context) => SignUpPage(),)),
+                      child: Text('Sign Up',style: GoogleFonts.poppins(
+                      color: Colors.red,
+                      fontWeight: FontWeight.w500),))
+                  ],
+                ),
+
+                const SizedBox(height: 25.0),
+
                 // Sign In Button
                 ElevatedButton(
                   style: ButtonStyle(
@@ -176,15 +292,16 @@ class _SignInPageState extends State<SignInPage> {
                       // Add your sign-in logic here
                     }
 
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => MapDemoPage(),
-                        ));
+                    // Navigator.push(
+                    //     context,
+                    //     MaterialPageRoute(
+                    //       builder: (context) => MapDemoPage(),
+                    //     ));
+                    _trySubmit();
                   },
                   child: Text('Sign In',
                       style: GoogleFonts.notoSans(
-                        color: Colors.white,
+                          color: Colors.white,
                           fontSize: 18,
                           fontWeight: FontWeight.w500)),
                 ),

@@ -1,5 +1,6 @@
-import 'package:attendo/Pages/Demo.dart';
+import 'package:attendo/Constants.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 class AttendanceLogs extends StatefulWidget {
@@ -12,7 +13,7 @@ class AttendanceLogs extends StatefulWidget {
 class _AttendanceLogsState extends State<AttendanceLogs> {
   PageController _pageController = PageController();
   int _selectedIndex = 0;
-  CalendarFormat _calendarFormat = CalendarFormat.month;
+  // CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
   final List<String> items = [
@@ -41,20 +42,20 @@ class _AttendanceLogsState extends State<AttendanceLogs> {
       lastDay: DateTime.utc(2030, 12, 31),
       focusedDay: _focusedDay,
       selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-      calendarFormat: _calendarFormat,
+      // calendarFormat: _calendarFormat,
       onDaySelected: (selectedDay, focusedDay) {
         setState(() {
           _selectedDay = selectedDay;
           _focusedDay = focusedDay;
         });
       },
-      onFormatChanged: (format) {
-        if (_calendarFormat != format) {
-          setState(() {
-            _calendarFormat = format;
-          });
-        }
-      },
+      // onFormatChanged: (format) {
+      //   if (_calendarFormat != format) {
+      //     setState(() {
+      //       _calendarFormat = format;
+      //     });
+      //   }
+      // },
       onPageChanged: (focusedDay) {
         _focusedDay = focusedDay;
       },
@@ -62,7 +63,7 @@ class _AttendanceLogsState extends State<AttendanceLogs> {
         isTodayHighlighted: true,
         selectedDecoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Colors.blue, Colors.lightBlueAccent],
+            colors: [primaryColor, primaryColor.withOpacity(0.8)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -70,65 +71,65 @@ class _AttendanceLogsState extends State<AttendanceLogs> {
         ),
         todayDecoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Colors.green, Colors.lightGreen],
+            colors: [secondaryColor, secondaryColor.withOpacity(0.8)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           shape: BoxShape.circle,
         ),
-        weekendTextStyle: TextStyle(
+        weekendTextStyle: GoogleFonts.poppins(
           color: Colors.redAccent,
           fontWeight: FontWeight.w600,
         ),
-        holidayTextStyle: TextStyle(
+        holidayTextStyle: GoogleFonts.poppins(
           color: Colors.purple,
           fontWeight: FontWeight.bold,
         ),
         outsideDaysVisible: true,
-        outsideTextStyle: TextStyle(color: Colors.grey.shade500),
-        disabledTextStyle: TextStyle(color: Colors.grey.shade300),
-        selectedTextStyle: TextStyle(
+        outsideTextStyle: GoogleFonts.poppins(color: Colors.grey.shade500),
+        disabledTextStyle: GoogleFonts.poppins(color: Colors.grey.shade300),
+        selectedTextStyle: GoogleFonts.poppins(
+          color: secondaryColor,
+          fontWeight: FontWeight.bold,
+          fontSize: 16,
+        ),
+        todayTextStyle: GoogleFonts.poppins(
           color: Colors.white,
           fontWeight: FontWeight.bold,
           fontSize: 16,
         ),
-        todayTextStyle: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 16,
-        ),
-        defaultTextStyle: TextStyle(
+        defaultTextStyle: GoogleFonts.poppins(
           fontSize: 14,
           fontWeight: FontWeight.w500,
           color: Colors.black87,
         ),
-        withinRangeTextStyle: TextStyle(color: Colors.teal),
+        withinRangeTextStyle: GoogleFonts.poppins(color: Colors.teal),
       ),
       headerStyle: HeaderStyle(
-        titleTextStyle: TextStyle(
-          color: Colors.blueGrey,
+        titleTextStyle: GoogleFonts.poppins(
+          color: secondaryColor,
           fontSize: 20,
           fontWeight: FontWeight.bold,
         ),
         titleCentered: true,
-        formatButtonVisible: true,
-        formatButtonDecoration: BoxDecoration(
-          color: Colors.blue,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        formatButtonTextStyle: TextStyle(
-          color: Colors.white,
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-        ),
+        formatButtonVisible: false,
+        // formatButtonDecoration: BoxDecoration(
+        //   color: primaryColor,
+        //   borderRadius: BorderRadius.circular(20),
+        // ),
+        // formatButtonTextStyle: GoogleFonts.notoSans(
+        //   color: Colors.white,
+        //   fontSize: 16,
+        //   fontWeight: FontWeight.w600,
+        // ),
         leftChevronIcon: Icon(
           Icons.chevron_left,
-          color: Colors.blue,
+          color: secondaryColor,
           size: 28,
         ),
         rightChevronIcon: Icon(
           Icons.chevron_right,
-          color: Colors.blue,
+          color: secondaryColor,
           size: 28,
         ),
       ),
@@ -158,7 +159,7 @@ class _AttendanceLogsState extends State<AttendanceLogs> {
               // Date header
               Text(
                 'Oct 27, 2024',
-                style: TextStyle(
+                style: GoogleFonts.roboto(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: Colors.blueAccent,
@@ -175,7 +176,7 @@ class _AttendanceLogsState extends State<AttendanceLogs> {
                     children: [
                       Text(
                         "Check-In",
-                        style: TextStyle(
+                        style: GoogleFonts.roboto(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                           color: Colors.black87,
@@ -184,7 +185,7 @@ class _AttendanceLogsState extends State<AttendanceLogs> {
                       SizedBox(height: 6),
                       Text(
                         '09:00 AM',
-                        style: TextStyle(
+                        style: GoogleFonts.roboto(
                           fontSize: 16,
                           color: Colors.green,
                           fontWeight: FontWeight.bold,
@@ -198,7 +199,7 @@ class _AttendanceLogsState extends State<AttendanceLogs> {
                     children: [
                       Text(
                         "Check-Out",
-                        style: TextStyle(
+                        style: GoogleFonts.roboto(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                           color: Colors.black87,
@@ -207,7 +208,7 @@ class _AttendanceLogsState extends State<AttendanceLogs> {
                       SizedBox(height: 6),
                       Text(
                         '05:00 PM',
-                        style: TextStyle(
+                        style: GoogleFonts.roboto(
                           fontSize: 16,
                           color: Colors.redAccent,
                           fontWeight: FontWeight.bold,
@@ -228,7 +229,7 @@ class _AttendanceLogsState extends State<AttendanceLogs> {
                     children: [
                       Text(
                         "Status",
-                        style: TextStyle(
+                        style: GoogleFonts.roboto(
                           fontSize: 14,
                           color: Colors.black54,
                         ),
@@ -236,7 +237,7 @@ class _AttendanceLogsState extends State<AttendanceLogs> {
                       SizedBox(height: 4),
                       Text(
                         'Present',
-                        style: TextStyle(
+                        style: GoogleFonts.roboto(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
                           color: 'Present' == "Present"
@@ -252,7 +253,7 @@ class _AttendanceLogsState extends State<AttendanceLogs> {
                     children: [
                       Text(
                         "Type",
-                        style: TextStyle(
+                        style: GoogleFonts.roboto(
                           fontSize: 14,
                           color: Colors.black54,
                         ),
@@ -260,7 +261,7 @@ class _AttendanceLogsState extends State<AttendanceLogs> {
                       SizedBox(height: 4),
                       Text(
                         'Manual',
-                        style: TextStyle(
+                        style: GoogleFonts.roboto(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
                           color: Colors.blueAccent,
@@ -273,13 +274,6 @@ class _AttendanceLogsState extends State<AttendanceLogs> {
             ],
           ),
         ),
-        ElevatedButton(
-            onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => Demo(),
-                )),
-            child: Text('Demo'))
       ],
     );
   }
@@ -297,7 +291,6 @@ class _AttendanceLogsState extends State<AttendanceLogs> {
             },
             icon: Icon(
               Icons.arrow_back_ios,
-              color: Colors.black,
             )),
         actions: [
           SearchAnchor(
@@ -346,8 +339,8 @@ class _AttendanceLogsState extends State<AttendanceLogs> {
                           color: Colors.grey.shade400,
                           blurStyle: BlurStyle.outer)
                     ],
-                    color: Colors.grey.shade200,
-                    borderRadius: BorderRadius.circular(20)),
+                    color: secondaryColor,
+                    borderRadius: BorderRadius.circular(30)),
                 child: Center(
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -358,23 +351,18 @@ class _AttendanceLogsState extends State<AttendanceLogs> {
                           padding: const EdgeInsets.symmetric(vertical: 9),
                           width: screenWidth * (44 / 100),
                           decoration: BoxDecoration(
-                            boxShadow: [
-                              BoxShadow(
-                                  blurRadius: 5,
-                                  color: _selectedIndex == 0
-                                      ? Colors.grey.shade300
-                                      : Colors.transparent,
-                                  blurStyle: BlurStyle.outer)
-                            ],
                             color: _selectedIndex == 0
-                                ? Colors.white
+                                ? primaryColor
                                 : Colors.transparent,
-                            borderRadius: BorderRadius.circular(15),
+                            borderRadius: BorderRadius.circular(25),
                           ),
-                          child: const Center(
+                          child: Center(
                             child: Text(
                               'Logs',
-                              style: TextStyle(
+                              style: GoogleFonts.poppins(
+                                color: _selectedIndex == 0
+                                    ? secondaryColor
+                                    : primaryColor,
                                 fontSize: 18,
                               ),
                             ),
@@ -387,22 +375,17 @@ class _AttendanceLogsState extends State<AttendanceLogs> {
                           width: screenWidth * (44 / 100),
                           padding: const EdgeInsets.symmetric(vertical: 9),
                           decoration: BoxDecoration(
-                              boxShadow: [
-                                BoxShadow(
-                                    blurRadius: 5,
-                                    color: _selectedIndex == 1
-                                        ? Colors.grey.shade300
-                                        : Colors.transparent,
-                                    blurStyle: BlurStyle.outer)
-                              ],
                               color: _selectedIndex == 1
-                                  ? Colors.white
+                                  ? primaryColor
                                   : Colors.transparent,
-                              borderRadius: BorderRadius.circular(15)),
-                          child: const Center(
+                              borderRadius: BorderRadius.circular(25)),
+                          child: Center(
                             child: Text(
                               'Pending',
-                              style: TextStyle(
+                              style: GoogleFonts.poppins(
+                                color: _selectedIndex == 1
+                                    ? secondaryColor
+                                    : primaryColor,
                                 fontSize: 18,
                               ),
                             ),
