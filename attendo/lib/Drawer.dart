@@ -1,5 +1,11 @@
 import 'package:attendo/Constants.dart';
 import 'package:attendo/Pages/AttendanceLogs.dart';
+import 'package:attendo/Pages/FAQsPage.dart';
+import 'package:attendo/Pages/HelpPage.dart';
+import 'package:attendo/Pages/MyProfilePage.dart';
+import 'package:attendo/Pages/RequestAttendance.dart';
+import 'package:attendo/Pages/SetGeofenceArea.dart';
+import 'package:attendo/Pages/ShiftManagementPage.dart';
 import 'package:attendo/Pages/SignInPage.dart';
 import 'package:attendo/Pages/Verification.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,14 +13,19 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppDrawer extends StatefulWidget {
-  const AppDrawer({super.key, required this.isAdmin,required this.userName,required this.userEmail});
+  const AppDrawer(
+      {super.key,
+      required this.isAdmin,
+      required this.userName,
+      required this.userEmail});
 
   final bool isAdmin;
   final String userName;
   final String userEmail;
 
   @override
-  State<AppDrawer> createState() => _AppDrawerState(this.isAdmin,this.userName,this.userEmail);
+  State<AppDrawer> createState() =>
+      _AppDrawerState(this.isAdmin, this.userName, this.userEmail);
 }
 
 class _AppDrawerState extends State<AppDrawer> {
@@ -23,7 +34,7 @@ class _AppDrawerState extends State<AppDrawer> {
   final String userName;
   final String userEmail;
 
-  _AppDrawerState(this.isAdmin,this.userName,this.userEmail);
+  _AppDrawerState(this.isAdmin, this.userName, this.userEmail);
 
   @override
   Widget build(BuildContext context) {
@@ -55,6 +66,7 @@ class _AppDrawerState extends State<AppDrawer> {
                         } else {
                           return Center(
                             child: CircularProgressIndicator(
+                              color: secondaryColor,
                               value: loadingProgress.expectedTotalBytes != null
                                   ? loadingProgress.cumulativeBytesLoaded /
                                       loadingProgress.expectedTotalBytes!
@@ -76,6 +88,21 @@ class _AppDrawerState extends State<AppDrawer> {
           ),
           ListTile(
             leading: const Icon(
+              Icons.person,
+              color: secondaryColor,
+            ),
+            title: Text('My Profile',
+                style: GoogleFonts.poppins(
+                  color: secondaryColor,
+                )),
+            onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => MyProfilePage(userName: userName,),
+                )),
+          ),
+          ListTile(
+            leading: const Icon(
               Icons.event,
               color: secondaryColor,
             ),
@@ -86,7 +113,7 @@ class _AppDrawerState extends State<AppDrawer> {
             onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => AttendanceLogs(),
+                  builder: (context) => AttendanceLogs(userEmail: userEmail,),
                 )),
           ),
           ListTile(
@@ -94,11 +121,15 @@ class _AppDrawerState extends State<AppDrawer> {
                 Icons.calendar_month,
                 color: secondaryColor,
               ),
-              title: Text('Manual Attendance',
+              title: Text('Request Attendance',
                   style: GoogleFonts.poppins(
                     color: secondaryColor,
                   )),
-              onTap: () {}),
+              onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => RequestAttendance(userName: userName,userEmail: userEmail),
+                      ))),
           isAdmin
               ? ListTile(
                   leading: const Icon(
@@ -116,6 +147,40 @@ class _AppDrawerState extends State<AppDrawer> {
                       )),
                 )
               : Container(),
+          isAdmin
+              ? ListTile(
+                  leading: const Icon(
+                    Icons.location_on,
+                    color: secondaryColor,
+                  ),
+                  title: Text('Set Geofence Area',
+                      style: GoogleFonts.poppins(
+                        color: secondaryColor,
+                      )),
+                  onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => SetGeofenceArea(),
+                      )),
+                )
+              : Container(),
+              isAdmin
+              ? ListTile(
+                  leading: const Icon(
+                    Icons.schedule,
+                    color: secondaryColor,
+                  ),
+                  title: Text('Set Shift Time',
+                      style: GoogleFonts.poppins(
+                        color: secondaryColor,
+                      )),
+                  onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ShiftManagementPage(),
+                      )),
+                )
+              : Container(),
           // const Divider(),
           ListTile(
             leading: const Icon(
@@ -126,7 +191,11 @@ class _AppDrawerState extends State<AppDrawer> {
                 style: GoogleFonts.poppins(
                   color: secondaryColor,
                 )),
-            onTap: () {},
+            onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => FAQsPage(),
+                  ))
           ),
           ListTile(
             leading: const Icon(
@@ -137,7 +206,11 @@ class _AppDrawerState extends State<AppDrawer> {
                 style: GoogleFonts.poppins(
                   color: secondaryColor,
                 )),
-            onTap: () {},
+            onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => HelpPage(),
+                  ))
           ),
           ListTile(
             leading: const Icon(
@@ -151,7 +224,7 @@ class _AppDrawerState extends State<AppDrawer> {
             onTap: () async {
               // Handle navigation
               await FirebaseAuth.instance.signOut();
-              
+
               Navigator.of(context).pushReplacement(
                 MaterialPageRoute(builder: (context) => SignInPage()),
               );

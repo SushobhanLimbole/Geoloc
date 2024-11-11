@@ -1,3 +1,4 @@
+import 'package:attendo/Constants.dart';
 import 'package:attendo/Pages/AttendanceMap.dart';
 import 'package:attendo/Pages/SignInPage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -47,7 +48,9 @@ class _WrapperState extends State<Wrapper> {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(),
+              child: CircularProgressIndicator(
+                color: secondaryColor,
+              ),
             );
           } else if (snapshot.hasError) {
             return const Center(
@@ -63,7 +66,9 @@ class _WrapperState extends State<Wrapper> {
                 builder: (context, roleSnapshot) {
                   if (roleSnapshot.connectionState == ConnectionState.waiting) {
                     return const Center(
-                      child: CircularProgressIndicator(),
+                      child: CircularProgressIndicator(
+                        color: secondaryColor,
+                      ),
                     );
                   } else if (roleSnapshot.hasError || !roleSnapshot.hasData) {
                     return const Center(

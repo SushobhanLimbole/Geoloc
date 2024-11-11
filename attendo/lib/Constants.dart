@@ -6,6 +6,7 @@ const secondaryColor = Color.fromRGBO(68, 103, 83, 1);
 
 AppBarTheme customAppBarTheme = AppBarTheme(
   backgroundColor: primaryColor,
+  centerTitle: true,
   iconTheme: IconThemeData(color: secondaryColor),
   titleTextStyle: GoogleFonts.poppins(
     color: secondaryColor,

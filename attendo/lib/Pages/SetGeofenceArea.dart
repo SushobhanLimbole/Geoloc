@@ -1,34 +1,22 @@
 import 'dart:async';
-import 'package:attendo/Drawer.dart';
+import 'package:attendo/Constants.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
 class SetGeofenceArea extends StatefulWidget {
-  SetGeofenceArea({required this.isAdmin,required this.userName,required this.userEmail});
-
-  final bool isAdmin;
-  final String userName;
-  final String userEmail;
   @override
-  _SetGeofenceAreaState createState() => _SetGeofenceAreaState(this.isAdmin,this.userName,this.userEmail);
+  _SetGeofenceAreaState createState() => _SetGeofenceAreaState();
 }
 
 class _SetGeofenceAreaState extends State<SetGeofenceArea> {
   LatLng? _currentLocation;
-  LatLng? _pickedLocation;
-  bool _showGeofence = false;
-  Timer? _locationCheckTimer;
-  final bool isAdmin;
-  final String userName;
-  final String userEmail;
+  List<Map<String, dynamic>> _pickedLocations = [];
+  bool _showGeofences = false;
 
   static const double geofenceRadius = 200; // 200 meters
-
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
-  _SetGeofenceAreaState(this.isAdmin,this.userName,this.userEmail);
 
   @override
   void initState() {
@@ -36,13 +24,6 @@ class _SetGeofenceAreaState extends State<SetGeofenceArea> {
     _getCurrentLocation();
   }
 
-  @override
-  void dispose() {
-    _locationCheckTimer?.cancel(); // Stop timer on dispose
-    super.dispose();
-  }
-
-  // Method to get the current location
   Future<void> _getCurrentLocation() async {
     LocationPermission permission = await Geolocator.requestPermission();
 
@@ -54,11 +35,6 @@ class _SetGeofenceAreaState extends State<SetGeofenceArea> {
       setState(() {
         _currentLocation = LatLng(position.latitude, position.longitude);
       });
-
-      // Start periodic location checks every 15 seconds
-      // _locationCheckTimer = Timer.periodic(Duration(minutes: 5), (timer) {
-      //   _checkUserLocation();
-      // });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -67,142 +43,200 @@ class _SetGeofenceAreaState extends State<SetGeofenceArea> {
     }
   }
 
-  // Method to toggle geofence display
-  void _toggleGeofence() {
-    if (_pickedLocation != null) {
-      setState(() {
-        _showGeofence = !_showGeofence;
-      });
+  Future<void> _toggleGeofence() async {
+    setState(() {
+      _showGeofences = !_showGeofences;
+    });
+
+    if (_showGeofences && _pickedLocations.isNotEmpty) {
+      // Upload picked locations as geofences to Firestore
+      for (var location in _pickedLocations) {
+        await FirebaseFirestore.instance
+            .collection('geofencing')
+            .doc(location['id'])
+            .set({
+          'fence': {
+            'latitude': location['fence'].latitude,
+            'longitude': location['fence'].longitude,
+          },
+        });
+      }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(_showGeofence ? 'Geofence Set' : 'Geofence Removed')),
+        SnackBar(content: Text('Geofences Set')),
       );
-    } else {
+    } else if (!_showGeofences) {
+      // Remove geofences from Firestore without clearing _pickedLocations
+      for (var location in _pickedLocations) {
+        await FirebaseFirestore.instance
+            .collection('geofencing')
+            .doc(location['id'])
+            .delete();
+      }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please pick a location on the map first.')),
+        SnackBar(content: Text('Geofences Removed')),
       );
     }
   }
 
-  // Method to check if user is within geofencing area
-  // Future<void> _checkUserLocation() async {
-  //   if (_pickedLocation != null) {
-  //     Position position = await Geolocator.getCurrentPosition(
-  //         desiredAccuracy: LocationAccuracy.high);
-  //     LatLng userLocation = LatLng(position.latitude, position.longitude);
+  void _addPickedLocation(LatLng latLng) {
+    final String geofenceId = DateTime.now().millisecondsSinceEpoch.toString();
 
-  //     // Calculate distance between user location and picked location
-  //     final distance =
-  //         Distance().as(LengthUnit.Meter, _pickedLocation!, userLocation);
+    setState(() {
+      _pickedLocations.add({
+        'id': geofenceId,
+        'fence': latLng,
+      });
+    });
 
-  //     if (distance <= geofenceRadius) {
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         SnackBar(content: Text('You are within the geofence area.')),
-  //       );
-  //     } else {
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         SnackBar(content: Text('You are outside the geofence area.')),
-  //       );
-  //     }
-  //   }
-  // }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Picked Location: (${latLng.latitude}, ${latLng.longitude}) with ID: $geofenceId',
+        ),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Future<void> _removePickedLocation(String geofenceId) async {
+  // Remove from the local picked locations list
+  setState(() {
+    _pickedLocations.removeWhere((location) => location['id'] == geofenceId);
+  });
+
+  // Check if the location exists in Firestore and delete if necessary
+  final DocumentReference geofenceRef =
+      FirebaseFirestore.instance.collection('geofencing').doc(geofenceId);
+
+  try {
+    final snapshot = await geofenceRef.get();
+
+    if (snapshot.exists) {
+      await geofenceRef.delete();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Geofence location removed from Firestore.')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Geofence location removed locally.')),
+      );
+    }
+  } catch (error) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Failed to remove geofence: $error')),
+    );
+  }
+}
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      key: _scaffoldKey,
       appBar: AppBar(
         title: Text('Set Geofence Area'),
-        centerTitle: true,
         leading: IconButton(
-          onPressed: () => _scaffoldKey.currentState!
-              .openDrawer(), // Open drawer on icon tap
-          icon: Icon(Icons.sort),
+          icon: Icon(Icons.arrow_back_ios),
+          onPressed: () => Navigator.pop(context),
+          tooltip: 'Add Location',
         ),
         actions: [
           IconButton(
             icon: Icon(Icons.location_on),
             onPressed: _toggleGeofence,
-            tooltip: 'Set Geofence',
+            tooltip: 'Toggle Geofences',
           ),
         ],
       ),
-      drawer: AppDrawer(
-        isAdmin: isAdmin,
-        userName: userName,
-        userEmail: userEmail,
-      ),
-      body: Stack(
-        children: [
-          if (_currentLocation != null)
-            FlutterMap(
-              options: MapOptions(
-                initialCenter: _currentLocation!,
-                initialZoom: 17.5,
-                onTap: (tapPosition, latLng) {
-                  setState(() {
-                    _pickedLocation = latLng;
-                    _showGeofence = false; // Reset geofence display on new pick
-                  });
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Picked Location: (${latLng.latitude}, ${latLng.longitude})',
-                      ),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
-                },
-              ),
-              children: [
-                TileLayer(
-                  urlTemplate:
-                      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.example.app',
-                ),
-                MarkerLayer(
-                  markers: [
-                    Marker(
+      body: _currentLocation == null
+          ? Center(child: CircularProgressIndicator(color: secondaryColor))
+          : StreamBuilder(
+              stream: FirebaseFirestore.instance
+                  .collection('geofencing')
+                  .snapshots(),
+              builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(child: CircularProgressIndicator());
+                }
+
+                List<Marker> markers = [];
+                List<CircleMarker> circles = [];
+
+                markers.add(
+                  Marker(
                       width: 80.0,
                       height: 80.0,
                       point: _currentLocation!,
-                      child: Icon(
-                        Icons.my_location,
-                        color: Colors.blue,
-                        size: 40.0,
-                      ),
-                    ),
-                    if (_pickedLocation != null)
-                      Marker(
-                        width: 80.0,
-                        height: 80.0,
-                        point: _pickedLocation!,
+                      child: Container(
+                        decoration: BoxDecoration(
+                            color: Colors.lightBlue.withOpacity(0.2),
+                            shape: BoxShape.circle),
+                        child: Center(
+                          child: Container(
+                            height: 25,
+                            width: 25,
+                            decoration: BoxDecoration(
+                                color: Colors.blue,
+                                shape: BoxShape.circle,
+                                border:
+                                    Border.all(color: Colors.white, width: 3)),
+                          ),
+                        ),
+                      )),
+                );
+
+                for (var location in _pickedLocations) {
+                  markers.add(
+                    Marker(
+                      width: 80.0,
+                      height: 80.0,
+                      point: location['fence'],
+                      child: GestureDetector(
+                        onLongPress: () =>
+                            _removePickedLocation(location['id']),
                         child: Icon(
                           Icons.location_on,
                           color: Colors.red,
                           size: 40.0,
                         ),
                       ),
-                  ],
-                ),
-                if (_showGeofence && _pickedLocation != null)
-                  CircleLayer(
-                    circles: [
-                      CircleMarker(
-                        point: _pickedLocation!,
-                        color: Colors.lightGreen.withOpacity(0.3),
-                        borderStrokeWidth: 2.0,
-                        useRadiusInMeter: true,
-                        radius: geofenceRadius,
+                    ),
+                  );
+
+                  circles.add(
+                    CircleMarker(
+                      point: location['fence'],
+                      color: Colors.lightGreenAccent.withOpacity(0.3),
+                      useRadiusInMeter: true,
+                      radius: geofenceRadius,
+                    ),
+                  );
+                }
+
+                return Stack(
+                  children: [
+                    FlutterMap(
+                      options: MapOptions(
+                        initialCenter: _currentLocation!,
+                        initialZoom: 17,
+                        onTap: (tapPosition, latLng) {
+                          _addPickedLocation(latLng);
+                        },
                       ),
-                    ],
-                  ),
-              ],
+                      children: [
+                        TileLayer(
+                          urlTemplate:
+                              'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          userAgentPackageName: 'com.example.app',
+                        ),
+                        if (_currentLocation != null)
+                          MarkerLayer(markers: markers),
+                        if (_showGeofences) CircleLayer(circles: circles),
+                      ],
+                    ),
+                  ],
+                );
+              },
             ),
-          if (_currentLocation == null)
-            Center(child: CircularProgressIndicator()),
-        ],
-      ),
     );
   }
 }

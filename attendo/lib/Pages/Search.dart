@@ -22,13 +22,7 @@ class _SearchFunctionalityState extends State<SearchFunctionality> {
     return Scaffold(
       appBar: AppBar(
         title: SearchAnchor.bar(
-          // searchFieldLabel: 'Search items...',
-          // builder: (context, controller) => IconButton(
-          //   icon: Icon(Icons.search),
-          //   onPressed: () {
-          //     controller.openView();
-          //   }, // Opens the search view
-          // ),
+          
           suggestionsBuilder: (context, controller) {
             // Filter items based on controller's query
             final query = controller.value.text;
