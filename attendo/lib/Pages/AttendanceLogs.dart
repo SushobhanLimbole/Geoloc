@@ -43,37 +43,42 @@ class _AttendanceLogsState extends State<AttendanceLogs> {
     );
   }
 
-
   Widget _logsCalendar() {
+    debugPrint('$userEmail-${DateFormat('yyyy_MM').format(_focusedDay)}');
+
     return StreamBuilder(
       stream: FirebaseFirestore.instance
           .collection('attendanceRecords')
-          .where('userEmail',
-              isEqualTo:
-                  userEmail) // replace userEmail with the actual variable
+          .doc('$userEmail-${DateFormat('yyyy_MM').format(_focusedDay)}')
+          .collection('dailyRecords')
           .snapshots(),
       builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator(color: secondaryColor,));
+          return Center(
+              child: CircularProgressIndicator(color: secondaryColor));
         }
 
         if (snapshot.hasError) {
           return Center(child: Text('Error: ${snapshot.error}'));
         }
 
-        // if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-        //   return Center(child: Text('No attendance records found.'));
-        // }
+        // Initialize attendance data map
+        Map<DateTime, String> attendanceData = {};
 
         // Extract attendance data from snapshot
-        Map<DateTime, String> attendanceData = {};
         for (var doc in snapshot.data!.docs) {
-          DateTime date = (doc['date'] as Timestamp).toDate();
-          String status = doc['status'];
+          DateTime date = DateTime(
+            _focusedDay.year,
+            _focusedDay.month,
+            int.parse(doc.id), // Convert day key to an integer
+          );
+          String status = doc['status']; // Get status from the document
+
+          // Store the status in the attendance data map
           attendanceData[date] = status;
         }
 
-        // Calculate total attendance, present, and absent for the selected month
+        // Filter attendance data for the selected month
         Map<DateTime, String> filteredAttendance =
             _filterAttendanceByMonth(attendanceData, _focusedDay);
         int totalAttendance = filteredAttendance.length;
@@ -97,7 +102,50 @@ class _AttendanceLogsState extends State<AttendanceLogs> {
                   _selectedDay = selectedDay;
                   _focusedDay = focusedDay;
                 });
-                _showAttendanceDetails(selectedDay);
+
+                // Retrieve specific data for selectedDay from snapshot data
+                QueryDocumentSnapshot<Object?>? selectedDoc;
+                try {
+                  selectedDoc = snapshot.data!.docs.firstWhere(
+                    (doc) => int.parse(doc.id) == selectedDay.day,
+                  );
+                  debugPrint(
+                      'status ================= ${selectedDoc['status']}');
+                } catch (e) {
+                  debugPrint(
+                      'status ================= nulllllllllllllllllllllllllllllllll');
+                  selectedDoc = null; // No matching document found
+                }
+
+                if (selectedDoc != null) {
+                  // Get check-in, check-out, status, and type from document fields
+                  String checkInTime = selectedDoc['checkInTime'] != null ? selectedDoc['checkInTime'] : '--';
+                  String checkOutTime = selectedDoc['checkOutTime'] != null ? selectedDoc['checkOutTime'] : '--';
+                  String status = selectedDoc['status'];
+                  String type;
+
+                  selectedDoc['isManualEntry']
+                      ? type = 'Manual'
+                      : type = 'Auto';
+
+                  // Show the attendance details in bottom sheet
+                  _showAttendanceDetails(
+                    selectedDay,
+                    checkInTime: checkInTime,
+                    checkOutTime: checkOutTime,
+                    status: status,
+                    type: type,
+                  );
+                } else {
+                  // If no data is available for the selected day
+                  _showAttendanceDetails(
+                    selectedDay,
+                    checkInTime: '--',
+                    checkOutTime: '--',
+                    status: 'No Record',
+                    type: 'N/A',
+                  );
+                }
               },
               onPageChanged: (focusedDay) {
                 setState(() {
@@ -150,7 +198,7 @@ class _AttendanceLogsState extends State<AttendanceLogs> {
                     case 'Present':
                       dayColor = Colors.green;
                       break;
-                    case 'half_day':
+                    case 'Half Day':
                       dayColor = Colors.amber;
                       break;
                     case 'Absent':
@@ -220,6 +268,16 @@ class _AttendanceLogsState extends State<AttendanceLogs> {
     );
   }
 
+  String convertTimestampToDate(String timestamp) {
+    DateTime dateTime = DateTime.parse(timestamp);
+    return DateFormat('MMM dd, yyyy').format(dateTime);
+  }
+
+  String convertTimestampToTime(String timestamp) {
+    DateTime dateTime = DateTime.parse(timestamp);
+    return DateFormat('HH:mm').format(dateTime);
+  }
+
 // A helper method to filter attendance data by the current month
   Map<DateTime, String> _filterAttendanceByMonth(
       Map<DateTime, String> attendanceData, DateTime month) {
@@ -273,153 +331,190 @@ class _AttendanceLogsState extends State<AttendanceLogs> {
   }
 
   Widget _pendingLogs() {
-    return Column(
-      children: [
-        Container(
-          padding: EdgeInsets.all(12),
-          margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.shade300,
-                blurRadius: 8,
-                offset: Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Date header
-              Text(
-                'Oct 27, 2024',
-                style: GoogleFonts.roboto(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blueAccent,
-                ),
-              ),
-              SizedBox(height: 12),
+    debugPrint(
+        'pending ====== $userEmail-${DateFormat('yyyy_MM').format(DateTime.timestamp())}');
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('attendanceRecords')
+          .doc(
+              '$userEmail-${DateFormat('yyyy_MM').format(DateTime.timestamp())}')
+          .collection('dailyRecords')
+          .where('isPendingVerification',
+              isEqualTo: true) // Filter where isPendingAttendance is true
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(
+              child: CircularProgressIndicator(
+            color: secondaryColor,
+          )); // Show loading indicator
+        }
 
-              // Check-In and Check-Out row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return Center(child: Text('No pending attendance logs found.'));
+        }
+
+        var attendanceData = snapshot.data!.docs;
+
+        return ListView.builder(
+          itemCount: attendanceData.length,
+          itemBuilder: (context, index) {
+            var doc = attendanceData[index];
+            var checkInTime = doc['checkInTime'] != null ? doc['checkInTime'] : '--';
+            var checkOutTime = doc['checkOutTime'] != null ? doc['checkOutTime'] : '--';
+            var status = doc['status'] ?? 'Unknown';
+            var type = doc['isManualEntry'] ? 'Manual' : 'Auto';
+            var date = doc['date'] != null ? doc['date'] : '';
+
+            return Container(
+              padding: EdgeInsets.all(12),
+              margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.shade300,
+                    blurRadius: 8,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Check-In Column
-                  Column(
+                  // Date header
+                  Text(
+                    date,
+                    style: GoogleFonts.roboto(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blueAccent,
+                    ),
+                  ),
+                  SizedBox(height: 12),
+
+                  // Check-In and Check-Out row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        "Check-In",
-                        style: GoogleFonts.roboto(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
+                      // Check-In Column
+                      Column(
+                        children: [
+                          Text(
+                            "Check-In",
+                            style: GoogleFonts.roboto(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          SizedBox(height: 6),
+                          Text(
+                            checkInTime,
+                            style: GoogleFonts.roboto(
+                              fontSize: 16,
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
-                      SizedBox(height: 6),
-                      Text(
-                        '09:00 AM',
-                        style: GoogleFonts.roboto(
-                          fontSize: 16,
-                          color: Colors.green,
-                          fontWeight: FontWeight.bold,
-                        ),
+
+                      // Check-Out Column
+                      Column(
+                        children: [
+                          Text(
+                            "Check-Out",
+                            style: GoogleFonts.roboto(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          SizedBox(height: 6),
+                          Text(
+                            checkOutTime,
+                            style: GoogleFonts.roboto(
+                              fontSize: 16,
+                              color: Colors.redAccent,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
+                  SizedBox(height: 16),
 
-                  // Check-Out Column
-                  Column(
+                  // Status and Type Row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        "Check-Out",
-                        style: GoogleFonts.roboto(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
+                      // Status
+                      Column(
+                        children: [
+                          Text(
+                            "Status",
+                            style: GoogleFonts.roboto(
+                              fontSize: 14,
+                              color: Colors.black54,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            status,
+                            style: GoogleFonts.roboto(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: status == "Present"
+                                  ? Colors.green
+                                  : Colors.red,
+                            ),
+                          ),
+                        ],
                       ),
-                      SizedBox(height: 6),
-                      Text(
-                        '05:00 PM',
-                        style: GoogleFonts.roboto(
-                          fontSize: 16,
-                          color: Colors.redAccent,
-                          fontWeight: FontWeight.bold,
-                        ),
+
+                      // Type
+                      Column(
+                        children: [
+                          Text(
+                            "Type",
+                            style: GoogleFonts.roboto(
+                              fontSize: 14,
+                              color: Colors.black54,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            type,
+                            style: GoogleFonts.roboto(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.blueAccent,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ],
               ),
-              SizedBox(height: 16),
-
-              // Status and Type Row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Status
-                  Column(
-                    children: [
-                      Text(
-                        "Status",
-                        style: GoogleFonts.roboto(
-                          fontSize: 14,
-                          color: Colors.black54,
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Present',
-                        style: GoogleFonts.roboto(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: 'Present' == "Present"
-                              ? Colors.green
-                              : Colors.red,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  // Type
-                  Column(
-                    children: [
-                      Text(
-                        "Type",
-                        style: GoogleFonts.roboto(
-                          fontSize: 14,
-                          color: Colors.black54,
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Manual',
-                        style: GoogleFonts.roboto(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.blueAccent,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
+            );
+          },
+        );
+      },
     );
   }
 
-  void _showAttendanceDetails(DateTime selectedDay) {
+  void _showAttendanceDetails(
+    DateTime selectedDay, {
+    required String checkInTime,
+    required String checkOutTime,
+    required String status,
+    required String type,
+  }) {
     String formattedDate = DateFormat('MMM dd, yyyy').format(selectedDay);
-    String checkInTime = '09:00 AM'; // Replace with dynamic data
-    String checkOutTime = '05:00 PM'; // Replace with dynamic data
-    String status = 'Present'; // Replace with dynamic data
-    String type = 'Manual'; // Replace with dynamic data
 
     showModalBottomSheet(
       context: context,
@@ -468,7 +563,7 @@ class _AttendanceLogsState extends State<AttendanceLogs> {
                   _buildDetailColumn(
                     icon: Icons.logout,
                     label: 'Check-Out',
-                    value: checkOutTime,
+                    value: checkOutTime != null ? checkOutTime : 'Pending',
                     valueColor: Colors.redAccent,
                   ),
                 ],
@@ -489,7 +584,7 @@ class _AttendanceLogsState extends State<AttendanceLogs> {
                     icon: Icons.work,
                     label: 'Type',
                     value: type,
-                    valueColor: Colors.blueAccent,
+                    valueColor: type == 'Auto' ? Colors.green : Colors.red,
                   ),
                 ],
               ),
@@ -531,6 +626,8 @@ class _AttendanceLogsState extends State<AttendanceLogs> {
     );
   }
 
+  
+
   @override
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
@@ -546,34 +643,36 @@ class _AttendanceLogsState extends State<AttendanceLogs> {
               Icons.arrow_back_ios,
             )),
         actions: [
-          SearchAnchor(
-            builder: (context, controller) => IconButton(
-                onPressed: () {
-                  controller.openView();
-                },
-                icon: Icon(Icons.search)),
-            suggestionsBuilder: (context, controller) {
-              // Filter items based on controller's query
-              final query = controller.value.text;
-              final suggestions = items
-                  .where((item) =>
-                      item.toLowerCase().contains(query.toLowerCase()))
-                  .toList();
+          // SearchAnchor(
+          //   builder: (context, controller) => IconButton(
+          //       onPressed: () {
+          //         controller.openView();
+          //       },
+          //       icon: Icon(Icons.search)),
+          //   suggestionsBuilder: (context, controller) {
+          //     // Filter items based on controller's query
+          //     final query = controller.value.text;
+          //     final suggestions = items
+          //         .where((item) =>
+          //             item.toLowerCase().contains(query.toLowerCase()))
+          //         .toList();
 
-              // Map each suggestion to a ListTile
-              return suggestions.map((suggestion) {
-                return ListTile(
-                  title: Text(suggestion),
-                  onTap: () {
-                    setState(() {
-                      // selectedQuery = suggestion;
-                    });
-                    controller.clear(); // Close search on selection
-                  },
-                );
-              });
-            },
-          ),
+          //     // Map each suggestion to a ListTile
+          //     return suggestions.map((suggestion) {
+          //       return ListTile(
+          //         title: Text(suggestion),
+          //         onTap: () {
+          //           setState(() {
+          //             // selectedQuery = suggestion;
+          //           });
+          //           controller.clear(); // Close search on selection
+          //         },
+          //       );
+          //     });
+          //   },
+          // ),
+          
+              
         ],
       ),
       body: Padding(
@@ -586,12 +685,6 @@ class _AttendanceLogsState extends State<AttendanceLogs> {
               Container(
                 padding: const EdgeInsets.all(5),
                 decoration: BoxDecoration(
-                    boxShadow: [
-                      BoxShadow(
-                          blurRadius: 15,
-                          color: Colors.grey.shade400,
-                          blurStyle: BlurStyle.outer)
-                    ],
                     color: secondaryColor,
                     borderRadius: BorderRadius.circular(30)),
                 child: Center(

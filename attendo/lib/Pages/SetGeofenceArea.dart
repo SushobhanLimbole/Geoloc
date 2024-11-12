@@ -78,15 +78,26 @@ class _SetGeofenceAreaState extends State<SetGeofenceArea> {
     }
   }
 
-  void _addPickedLocation(LatLng latLng) {
+  void _addPickedLocation(LatLng latLng) async {
     final String geofenceId = DateTime.now().millisecondsSinceEpoch.toString();
 
-    setState(() {
-      _pickedLocations.add({
-        'id': geofenceId,
-        'fence': latLng,
-      });
-    });
+    // setState(() async {
+
+      await FirebaseFirestore.instance
+            .collection('geofencing')
+            .doc(geofenceId)
+            .set({
+          'fence': {
+            'latitude': latLng.latitude,
+            'longitude': latLng.longitude,
+          },
+        });
+
+      // _pickedLocations.add({
+      //   'id': geofenceId,
+      //   'fence': latLng,
+      // });
+    // });
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -99,35 +110,34 @@ class _SetGeofenceAreaState extends State<SetGeofenceArea> {
   }
 
   Future<void> _removePickedLocation(String geofenceId) async {
-  // Remove from the local picked locations list
-  setState(() {
-    _pickedLocations.removeWhere((location) => location['id'] == geofenceId);
-  });
+    // Remove from the local picked locations list
+    setState(() {
+      _pickedLocations.removeWhere((location) => location['id'] == geofenceId);
+    });
 
-  // Check if the location exists in Firestore and delete if necessary
-  final DocumentReference geofenceRef =
-      FirebaseFirestore.instance.collection('geofencing').doc(geofenceId);
+    // Check if the location exists in Firestore and delete if necessary
+    final DocumentReference geofenceRef =
+        FirebaseFirestore.instance.collection('geofencing').doc(geofenceId);
 
-  try {
-    final snapshot = await geofenceRef.get();
+    try {
+      final snapshot = await geofenceRef.get();
 
-    if (snapshot.exists) {
-      await geofenceRef.delete();
+      if (snapshot.exists) {
+        await geofenceRef.delete();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Geofence location removed from Firestore.')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Geofence location removed locally.')),
+        );
+      }
+    } catch (error) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Geofence location removed from Firestore.')),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Geofence location removed locally.')),
+        SnackBar(content: Text('Failed to remove geofence: $error')),
       );
     }
-  } catch (error) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Failed to remove geofence: $error')),
-    );
   }
-}
-
 
   @override
   Widget build(BuildContext context) {
@@ -155,7 +165,25 @@ class _SetGeofenceAreaState extends State<SetGeofenceArea> {
                   .snapshots(),
               builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(child: CircularProgressIndicator());
+                  return Center(
+                      child: CircularProgressIndicator(
+                    color: secondaryColor,
+                  ));
+                }
+
+                if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+                  // Clear _pickedLocations to prevent duplicates
+                  _pickedLocations.clear();
+
+                  // Update _pickedLocations with data from snapshot
+                  snapshot.data!.docs.forEach((doc) {
+                    var locationData = doc.data() as Map<String, dynamic>;
+                    _pickedLocations.add({
+                      'id': doc.id,
+                      'fence': LatLng(locationData['fence']['latitude'],
+                          locationData['fence']['longitude']),
+                    });
+                  });
                 }
 
                 List<Marker> markers = [];

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 class RequestAttendance extends StatefulWidget {
   const RequestAttendance(
@@ -35,7 +36,11 @@ class _RequestAttendanceState extends State<RequestAttendance> {
 
   Future<void> submitAttendanceRequest(BuildContext context) async {
     try {
-      // Unique ID for the attendance record
+      // Define the current month and day keys
+      final monthKey = DateFormat('yyyy_MM').format(DateTime.now());
+      final dayKey = DateFormat('dd').format(DateTime.now());
+
+      // Unique ID for the attendance request within the dailyRequests collection
       String attendanceId =
           FirebaseFirestore.instance.collection('attendanceRecords').doc().id;
 
@@ -43,39 +48,30 @@ class _RequestAttendanceState extends State<RequestAttendance> {
           ? otherReasonController.text
           : selectedReason ?? '';
 
-      // Example placeholders for check-in and check-out time
-      // Timestamp checkInTime = Timestamp.now(); // Replace with actual check-in time logic
-      // Timestamp checkOutTime = Timestamp.now(); // Replace with actual check-out time logic
-
-      // Calculate total time between check-in and check-out
-      // Duration totalTimeDuration = checkOutTime.toDate().difference(checkInTime.toDate());
-      // String totalTime = '${totalTimeDuration.inHours}h ${totalTimeDuration.inMinutes % 60}m';
-
-      // Example placeholder for location coordinates
-      // GeoPoint geoPoint =
-      //     GeoPoint(0.0, 0.0); // Replace with actual location data
-
       // Define attendance data
       Map<String, dynamic> attendanceData = {
         'attendanceId': attendanceId,
         'userEmail': userEmail,
         'userName': userName,
-        'checkInTime': '',
-        'checkOutTime': '',
-        'geoPoint': '',
-        'status': 'Pending',
+        'checkInTime': null, // For requests, check-in time is initially empty
+        'checkOutTime': null, // For requests, check-out time is initially empty
+        'geoPoint': '', // Not needed for requests
+        'status': 'Pending', // Set status to "Pending" for manual requests
         'validAttendance': false,
         'isManualEntry': true,
         'isPendingVerification': true,
         'verifiedBy': '',
         'reason': reason,
-        'totalTimeInGeofence': '', // Add totalTime to the attendance record
+        'totalTimeInGeofence': '',
+        'date': DateFormat('yyyy-MM-dd').format(DateTime.now()).toString() // Current date
       };
 
-      // Upload attendance request to Firestore
+      // Reference to the correct monthly document and dailyRequests subcollection
       await FirebaseFirestore.instance
           .collection('attendanceRecords')
-          .doc(attendanceId)
+          .doc('$userEmail-$monthKey')
+          .collection('dailyRecords')
+          .doc(dayKey)
           .set(attendanceData);
 
       ScaffoldMessenger.of(context).showSnackBar(

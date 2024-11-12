@@ -24,7 +24,8 @@ class _WrapperState extends State<Wrapper> {
       if (userDoc.exists) {
         // Assuming the role and userName are stored in the 'role' and 'userName' fields
         String userName = userDoc['userName'] ?? 'Unknown';
-        String userRole = userDoc['role'] ?? 'employee'; // Default to 'employee'
+        String userRole =
+            userDoc['role'] ?? 'employee'; // Default to 'employee'
         String userEmail = user.email ?? 'Unknown';
         return {
           'role': userRole,

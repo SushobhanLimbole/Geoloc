@@ -2,33 +2,53 @@ import 'package:attendo/Constants.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 class VerificationPage extends StatefulWidget {
-  const VerificationPage({super.key});
+  const VerificationPage({super.key, required this.userEmail});
+
+  final String userEmail;
 
   @override
-  _VerificationPageState createState() => _VerificationPageState();
+  _VerificationPageState createState() =>
+      _VerificationPageState(this.userEmail);
 }
 
 class _VerificationPageState extends State<VerificationPage> {
-  String searchQuery = "";
+  // String searchQuery = "";
 
-  void updateSearchQuery(String query) {
-    setState(() {
-      searchQuery = query;
-    });
-  }
+  final String userEmail;
+  _VerificationPageState(this.userEmail);
+
+  // void updateSearchQuery(String query) {
+  //   setState(() {
+  //     searchQuery = query;
+  //   });
+  // }
 
   Future<void> updateAttendanceStatus(
-      String documentId, bool isAccepted) async {
-    await FirebaseFirestore.instance
+    String empEmail,
+      String yearMonth, String day, bool isAccepted) async {
+    debugPrint('yearmonth ====== $yearMonth');
+    // Reference to the main document
+    DocumentReference mainDocRef = FirebaseFirestore.instance
         .collection('attendanceRecords')
-        .doc(documentId)
-        .update({
+        .doc('${empEmail}-${yearMonth}');
+
+    // Update the main document to include the month field
+    await mainDocRef.set({
+      'month': yearMonth, // Adding the month field in the main document
+    }, SetOptions(merge: true));
+
+    // Now update the specific day's attendance status within the nested 'dailyRecords' collection
+    await mainDocRef.collection("dailyRecords").doc(day).update({
+      'verifiedBy': userEmail,
       'isPendingVerification': false,
       'status': isAccepted ? 'Present' : 'Absent',
       'validAttendance': isAccepted,
     });
+
+    // Display a confirmation message using a SnackBar
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -42,154 +62,165 @@ class _VerificationPageState extends State<VerificationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text("Verification"),
-        leading: IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: Icon(Icons.arrow_back_ios)),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            // Search bar
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(30),
-              ),
-              child: TextField(
-                onChanged: updateSearchQuery,
-                decoration: InputDecoration(
-                  prefixIcon: Icon(Icons.search, color: Colors.grey),
-                  hintText: 'Search employee by name',
-                  border: InputBorder.none,
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
+        appBar: AppBar(
+          title: Text("Verification"),
+          leading: IconButton(
+              onPressed: () => Navigator.pop(context),
+              icon: Icon(Icons.arrow_back_ios)),
+        ),
+        body: Padding(
+          padding: const EdgeInsets.all(16),
+          child: StreamBuilder(
+            stream: FirebaseFirestore.instance
+                .collection('attendanceRecords')
+                .snapshots(),
+            builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Center(
+                    child: CircularProgressIndicator(
+                  color: secondaryColor,
+                ));
+              }
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return Center(child: Text("No attendance records found"));
+              }
 
-            // Displaying employee requests with StreamBuilder
-            Expanded(
-              child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('attendanceRecords')
-                    .where('isPendingVerification', isEqualTo: true)
-                    .snapshots(),
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData) {
-                    return const Center(child: CircularProgressIndicator(color: secondaryColor,));
-                  }
+              var attendanceRecords = snapshot.data!.docs;
+              return ListView.builder(
+                itemCount: attendanceRecords.length,
+                itemBuilder: (context, index) {
+                  var userMonthRecord = attendanceRecords[index];
 
-                  // Filter based on search query
-                  final requests = snapshot.data!.docs.where((doc) {
-                    final data = doc.data() as Map<String, dynamic>;
-                    final name = data["name"] ?? '';
-                    final email = data["email"] ?? '';
-                    return name.toLowerCase().contains(searchQuery.toLowerCase()) ||
-                        email.toLowerCase().contains(searchQuery.toLowerCase());
-                  }).toList();
+                  return StreamBuilder(
+                    stream: userMonthRecord.reference
+                        .collection('dailyRecords')
+                        .where('isManualEntry', isEqualTo: true)
+                        .snapshots(),
+                    builder:
+                        (context, AsyncSnapshot<QuerySnapshot> dailySnapshot) {
+                      if (dailySnapshot.connectionState ==
+                          ConnectionState.waiting) {
+                        return Center(child: CircularProgressIndicator());
+                      }
+                      if (!dailySnapshot.hasData ||
+                          dailySnapshot.data!.docs.isEmpty) {
+                        return SizedBox.shrink();
+                      }
 
-                  if (requests.isEmpty) {
-                    return const Center(
-                      child: Text(
-                        "No matching requests found",
-                        style: TextStyle(color: Colors.black54),
-                      ),
-                    );
-                  }
+                      var dailyRecords = dailySnapshot.data!.docs;
+                      return ListView.builder(
+                        shrinkWrap: true,
+                        physics: NeverScrollableScrollPhysics(),
+                        itemCount: dailyRecords.length,
+                        itemBuilder: (context, dayIndex) {
+                          var dayRecord = dailyRecords[dayIndex];
+                          var data = dayRecord.data() as Map<String, dynamic>;
 
-                  return ListView.builder(
-                    itemCount: requests.length,
-                    itemBuilder: (context, index) {
-                      final request = requests[index];
-                      final data = request.data() as Map<String, dynamic>;
-
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: InkWell(
-                          onTap: () {
-                            showRequestDetails(context, data, request.id);
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 10,
-                                  spreadRadius: 2,
-                                  offset: const Offset(0, 5),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              children: [
-                                CircleAvatar(
-                                  backgroundColor: primaryColor,
-                                  child: const Icon(Icons.person,
-                                      color: secondaryColor),
-                                  radius: 28,
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                          // Display the record if it requires verification
+                          if (data['isPendingVerification']) {
+                            debugPrint('entered');
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: InkWell(
+                                onTap: () {
+                                  showRequestDetails(context, data);
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(16),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.1),
+                                        blurRadius: 10,
+                                        spreadRadius: 2,
+                                        offset: const Offset(0, 5),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
                                     children: [
-                                      Text(
-                                        data["name"] ?? "N/A",
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w500,
-                                          color: secondaryColor,
+                                      CircleAvatar(
+                                        backgroundColor: primaryColor,
+                                        child: const Icon(Icons.person,
+                                            color: secondaryColor),
+                                        radius: 28,
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              data["userName"] ?? "N/A",
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.w500,
+                                                color: secondaryColor,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              data["userEmail"] ?? "N/A",
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 14,
+                                                color: Colors.black87,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              "Date: ${data["date"]}",
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 12,
+                                                color: Colors.black54,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        data["email"] ?? "N/A",
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 14,
-                                          color: Colors.black87,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        "Timestamp: ${data["timestamp"] ?? 'N/A'}",
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 12,
-                                          color: Colors.black54,
-                                        ),
+                                      const Icon(
+                                        Icons.arrow_forward_ios,
+                                        size: 16,
+                                        color: secondaryColor,
                                       ),
                                     ],
                                   ),
                                 ),
-                                const Icon(
-                                  Icons.arrow_forward_ios,
-                                  size: 16,
-                                  color: secondaryColor,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
+                              ),
+                            );
+                          }
+                          return SizedBox
+                              .shrink(); // Skip records that do not need verification
+                        },
                       );
                     },
                   );
                 },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+              );
+            },
+          ),
+        ));
   }
 
-  void showRequestDetails(
-      BuildContext context, Map<String, dynamic> data, String documentId) {
+  String convertTimestamp(String timestamp) {
+    DateTime dateTime = DateTime.parse(timestamp);
+    return DateFormat('yyyy-MM-dd HH:mm').format(dateTime);
+  }
+
+  String convertTimestampToYearMonth(String timestamp) {
+    DateTime dateTime = DateTime.parse(timestamp);
+    return DateFormat('yyyy_MM').format(dateTime);
+  }
+
+  String convertTimestampToDD(String timestamp) {
+    DateTime dateTime = DateTime.parse(timestamp);
+    return DateFormat('dd').format(dateTime);
+  }
+
+  void showRequestDetails(BuildContext context, Map<String, dynamic> data) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -230,7 +261,7 @@ class _VerificationPageState extends State<VerificationPage> {
                     ),
                   ),
                   Text(
-                    data["name"] ?? "N/A",
+                    data["userName"] ?? "N/A",
                     textAlign: TextAlign.center,
                     style: GoogleFonts.poppins(
                       fontSize: 22,
@@ -240,7 +271,7 @@ class _VerificationPageState extends State<VerificationPage> {
                   ),
                   const SizedBox(height: 10),
                   _detailTile(Icons.email_outlined, "Email",
-                      data["email"] ?? "Not provided"),
+                      data["userEmail"] ?? "Not provided"),
                   _detailTile(Icons.calendar_today_outlined, "Date",
                       data["date"] ?? "Not provided"),
                   _detailTile(Icons.info_outline, "Reason",
@@ -253,7 +284,11 @@ class _VerificationPageState extends State<VerificationPage> {
                         child: ElevatedButton(
                           onPressed: () {
                             Navigator.pop(context);
-                            updateAttendanceStatus(documentId, true);
+                            updateAttendanceStatus(
+                              data["userEmail"],
+                                convertTimestampToYearMonth(data['date']),
+                                convertTimestampToDD(data['date']),
+                                true);
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.green,
@@ -269,7 +304,7 @@ class _VerificationPageState extends State<VerificationPage> {
                         child: ElevatedButton(
                           onPressed: () {
                             Navigator.pop(context);
-                            _showDeclineConfirmation(context, documentId);
+                            _showDeclineConfirmation(context, data['date'],data['userEmail']);
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.red,
@@ -291,7 +326,7 @@ class _VerificationPageState extends State<VerificationPage> {
     );
   }
 
-  void _showDeclineConfirmation(BuildContext context, String documentId) {
+  void _showDeclineConfirmation(BuildContext context, String date,String empEmail) {
     showDialog(
       context: context,
       builder: (context) {
@@ -305,19 +340,22 @@ class _VerificationPageState extends State<VerificationPage> {
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
-                updateAttendanceStatus(documentId, false);
+                updateAttendanceStatus(empEmail,convertTimestampToYearMonth(date),
+                    convertTimestampToDD(date), false);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
               ),
-              child: Text("Yes", style: GoogleFonts.poppins(color: Colors.white)),
+              child:
+                  Text("Yes", style: GoogleFonts.poppins(color: Colors.white)),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(context),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
               ),
-              child: Text("No", style: GoogleFonts.poppins(color: Colors.white)),
+              child:
+                  Text("No", style: GoogleFonts.poppins(color: Colors.white)),
             ),
           ],
         );
@@ -326,6 +364,7 @@ class _VerificationPageState extends State<VerificationPage> {
   }
 
   Widget _detailTile(IconData icon, String title, String subtitle) {
+    debugPrint('sub ==== $subtitle');
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(

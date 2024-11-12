@@ -8,13 +8,19 @@ class HelpPage extends StatelessWidget {
   final List<Map<String, String>> developers = [
     {
       'name': 'Sushobhan Limbole',
-      'email': 'sushobhanlimbole17@gmail.com',
-      'linkedin': 'www.google.com',
+      'email': 'sushobhanlimbole17@gmail.com'
     },
     {
-      'name': 'Parnika Pise',
-      'email': 'parnikapise08@gmail.com',
-      'linkedin': 'www.linkedin.com/in/parnika-pise-9a9876243',
+      'name': 'Arya Kulkarni',
+      'email': 'arya.kulkarni1104@gmail.com'
+    },
+    {
+      'name': 'Supriya Lad',
+      'email': 'supriyalad1802@gmail.com'
+    },
+    {
+      'name': 'Sujal Jadhav',
+      'email': 'jsujal993@gmail.com'
     },
     // Add more developers as needed
   ];
@@ -104,19 +110,19 @@ class HelpPage extends StatelessWidget {
                     //   ],
                     // ),
                     // SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(Icons.link, color: Colors.blueAccent),
-                        SizedBox(width: 8),
-                        GestureDetector(
-                          onTap: () => _launchURL(developer['linkedin']!),
-                          child: Text(
-                            'LinkedIn Profile',
-                            style: GoogleFonts.poppins(color: Colors.blueAccent),
-                          ),
-                        ),
-                      ],
-                    ),
+                    // Row(
+                    //   children: [
+                    //     Icon(Icons.link, color: Colors.blueAccent),
+                    //     SizedBox(width: 8),
+                    //     GestureDetector(
+                    //       onTap: () => _launchURL(developer['linkedin']!),
+                    //       child: Text(
+                    //         'LinkedIn Profile',
+                    //         style: GoogleFonts.poppins(color: Colors.blueAccent),
+                    //       ),
+                    //     ),
+                    //   ],
+                    // ),
                   ],
                 ),
               ),

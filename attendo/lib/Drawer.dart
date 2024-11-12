@@ -143,7 +143,7 @@ class _AppDrawerState extends State<AppDrawer> {
                   onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => VerificationPage(),
+                        builder: (context) => VerificationPage(userEmail: userEmail,),
                       )),
                 )
               : Container(),
@@ -164,23 +164,23 @@ class _AppDrawerState extends State<AppDrawer> {
                       )),
                 )
               : Container(),
-              isAdmin
-              ? ListTile(
-                  leading: const Icon(
-                    Icons.schedule,
-                    color: secondaryColor,
-                  ),
-                  title: Text('Set Shift Time',
-                      style: GoogleFonts.poppins(
-                        color: secondaryColor,
-                      )),
-                  onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ShiftManagementPage(),
-                      )),
-                )
-              : Container(),
+              // isAdmin
+              // ? ListTile(
+              //     leading: const Icon(
+              //       Icons.schedule,
+              //       color: secondaryColor,
+              //     ),
+              //     title: Text('Set Shift Time',
+              //         style: GoogleFonts.poppins(
+              //           color: secondaryColor,
+              //         )),
+              //     onTap: () => Navigator.push(
+              //         context,
+              //         MaterialPageRoute(
+              //           builder: (context) => ShiftManagementPage(),
+              //         )),
+              //   )
+              // : Container(),
           // const Divider(),
           ListTile(
             leading: const Icon(

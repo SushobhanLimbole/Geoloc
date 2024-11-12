@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:intl/intl.dart';
 
 class AttendanceMap extends StatefulWidget {
   AttendanceMap({
@@ -30,7 +31,7 @@ class _AttendanceMapState extends State<AttendanceMap> {
   final String userName;
   final String userEmail;
 
-  final requiredTimeInMinutes = 15;
+  final requiredTimeInMinutes = 2;
 
   static const double geofenceRadius = 200; // 200 meters
 
@@ -64,7 +65,7 @@ class _AttendanceMapState extends State<AttendanceMap> {
       });
 
       // Start periodic location checks every 15 seconds
-      _locationCheckTimer = Timer.periodic(Duration(seconds: 15), (timer) {
+      _locationCheckTimer = Timer.periodic(Duration(seconds: 10), (timer) {
         _checkUserLocation();
       });
     } else {
@@ -77,116 +78,140 @@ class _AttendanceMapState extends State<AttendanceMap> {
 
   // Method to check if user is within geofencing area
   Future<void> _checkUserLocation() async {
-    // Get user's current location with high accuracy
-    Position position = await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-    );
-    LatLng userLocation = LatLng(position.latitude, position.longitude);
+  // Get the user's current location with high accuracy
+  Position position = await Geolocator.getCurrentPosition(
+    desiredAccuracy: LocationAccuracy.high,
+  );
+  LatLng userLocation = LatLng(position.latitude, position.longitude);
 
-    // Fetch geofences from Firestore
-    final geofenceDocs =
-        await FirebaseFirestore.instance.collection('geofencing').get();
+  // Fetch geofences from Firestore
+  final geofenceDocs =
+      await FirebaseFirestore.instance.collection('geofencing').get();
 
-    bool isInsideGeofence = false;
-    for (var doc in geofenceDocs.docs) {
-      double latitude = doc['fence']['latitude'];
-      double longitude = doc['fence']['longitude'];
-      LatLng geofenceLocation = LatLng(latitude, longitude);
+  bool isInsideGeofence = false;
 
-      // Calculate distance between user location and geofence location
-      final distance =
-          Distance().as(LengthUnit.Meter, geofenceLocation, userLocation);
+  for (var doc in geofenceDocs.docs) {
+    double latitude = doc['fence']['latitude'];
+    double longitude = doc['fence']['longitude'];
+    LatLng geofenceLocation = LatLng(latitude, longitude);
 
-      if (distance <= geofenceRadius) {
-        isInsideGeofence = true;
+    // Calculate distance between user location and geofence location
+    final distance =
+        Distance().as(LengthUnit.Meter, geofenceLocation, userLocation);
 
-        // Reference to attendanceRecords collection for the specific attendance record
-        final attendanceRef = FirebaseFirestore.instance
-            .collection('attendanceRecords')
-            .doc(userEmail);
+    if (distance <= geofenceRadius) {
+      isInsideGeofence = true;
 
-        final attendanceDoc = await attendanceRef.get();
+      // Define monthly and daily document references
+      final monthKey = DateFormat('yyyy_MM').format(DateTime.now());
+      final dayKey = DateFormat('dd').format(DateTime.now());
 
-        if (!attendanceDoc.exists || attendanceDoc['checkInTime'] == null) {
-          // Check-in: No check-in record, so create a new entry
-          await attendanceRef.set({
-            'attendanceId': attendanceRef.id,
-            'userName': userName,
-            'userEmail': userEmail,
-            'checkInTime': Timestamp.now(),
-            'checkOutTime': null,
-            'geoPoint': GeoPoint(position.latitude, position.longitude),
-            'status': 'Checked In',
-            'validAttendance': false,
-            'isManualEntry': false,
-            'isPendingVerification': false,
-            'verifiedBy': '',
-            'reason':'',
-            'totalTimeInGeofence': 0, // Initialize total time in geofence
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Checked in at geofence area.')),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('You are within the geofence area.')),
-          );
-        }
-        break; // Exit loop as user is inside at least one geofence
-      }
-    }
-
-    if (!isInsideGeofence) {
-      // User is outside the geofenced area
-      final attendanceRef = FirebaseFirestore.instance
+      // Main document reference for the month
+      final monthDocRef = FirebaseFirestore.instance
           .collection('attendanceRecords')
-          .doc(userEmail);
+          .doc('$userEmail-$monthKey');
 
+      // Add or update the month field in the monthly document
+      await monthDocRef.set({'month': monthKey}, SetOptions(merge: true));
+
+      // Reference for the specific day's attendance within the monthly document
+      final attendanceRef = monthDocRef.collection('dailyRecords').doc(dayKey);
       final attendanceDoc = await attendanceRef.get();
-      if (attendanceDoc.exists &&
-          attendanceDoc['checkInTime'] != null &&
-          attendanceDoc['checkOutTime'] == null) {
-        // Check-out: Record check-out time
-        final checkInTime =
-            (attendanceDoc['checkInTime'] as Timestamp).toDate();
-        final checkOutTime = DateTime.now();
 
-        // Calculate session duration
-        final sessionDuration = checkOutTime.difference(checkInTime);
-
-        // Accumulate total time in geofence
-        final totalTimeInGeofence =
-            (attendanceDoc['totalTimeInGeofence'] ?? 0) +
-                sessionDuration.inMinutes;
-
-        if (totalTimeInGeofence >= requiredTimeInMinutes) {
-          await attendanceRef.update({
-            'checkOutTime': Timestamp.fromDate(checkOutTime),
-            'status': 'Present',
-            'totalTimeInGeofence': totalTimeInGeofence,
-            'validAttendance': true,
-          });
-        } else {
-          await attendanceRef.update({
-            'checkOutTime': Timestamp.fromDate(checkOutTime),
-            'status': 'Absent',
-            'totalTimeInGeofence': totalTimeInGeofence,
-            'validAttendance': false,
-          });
-        }
+      if (!attendanceDoc.exists || attendanceDoc['checkInTime'] == null) {
+        // Check-in if there's no check-in record for today
+        await attendanceRef.set({
+          'attendanceId': attendanceRef.id,
+          'userName': userName,
+          'userEmail': userEmail,
+          'checkInTime': DateFormat('HH:mm').format(DateTime.now()).toString(),
+          'checkOutTime': null,
+          'geoPoint': GeoPoint(position.latitude, position.longitude),
+          'status': 'Checked In',
+          'validAttendance': false,
+          'isManualEntry': false,
+          'isPendingVerification': false,
+          'verifiedBy': '',
+          'reason': '',
+          'totalTimeInGeofence': 0, // Initialize total time in geofence
+          'date': DateFormat('yyyy-MM-dd').format(DateTime.now()).toString(), // Date field
+        });
 
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(
-                  'Checked out from geofence area. Total time in geofence: ${totalTimeInGeofence} minutes.')),
+          SnackBar(content: Text('Checked in at the geofence area.')),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('You are outside the geofence area.')),
+          SnackBar(content: Text('You are within the geofence area.')),
         );
       }
+      break; // Exit loop if user is inside at least one geofence
     }
   }
+
+  if (!isInsideGeofence) {
+    // User is outside the geofenced area
+    final monthKey = DateFormat('yyyy_MM').format(DateTime.now());
+    final dayKey = DateFormat('dd').format(DateTime.now());
+
+    // Reference for the specific day's attendance within the monthly document
+    final monthDocRef = FirebaseFirestore.instance
+        .collection('attendanceRecords')
+        .doc('$userEmail-$monthKey');
+    
+    await monthDocRef.set({'month': monthKey}, SetOptions(merge: true));
+    
+    final attendanceRef = monthDocRef.collection('dailyRecords').doc(dayKey);
+    final attendanceDoc = await attendanceRef.get();
+
+    if (attendanceDoc.exists &&
+        attendanceDoc['checkInTime'] != null &&
+        attendanceDoc['checkOutTime'] == null) {
+      // Check-out if there is a check-in record and no check-out yet
+      final checkInTimeStr = attendanceDoc['checkInTime'];
+      final checkOutTimeStr = DateFormat('HH:mm').format(DateTime.now());
+
+      // Parse checkInTime and checkOutTime strings to DateTime
+      final checkInTime = DateFormat('HH:mm').parse(checkInTimeStr);
+      final checkOutTime = DateFormat('HH:mm').parse(checkOutTimeStr);
+
+      // Calculate session duration
+      final sessionDuration = checkOutTime.difference(checkInTime);
+      final totalTimeInGeofence =
+          (attendanceDoc['totalTimeInGeofence'] ?? 0) + sessionDuration.inMinutes;
+
+      // Update attendance based on total time in geofence
+      if (totalTimeInGeofence >= requiredTimeInMinutes) {
+        await attendanceRef.update({
+          'checkOutTime': checkOutTimeStr.toString(),
+          'status': 'Present',
+          'totalTimeInGeofence': totalTimeInGeofence,
+          'validAttendance': true,
+        });
+      } else {
+        await attendanceRef.update({
+          'checkOutTime': checkOutTimeStr.toString(),
+          'status': 'Absent',
+          'totalTimeInGeofence': totalTimeInGeofence,
+          'validAttendance': false,
+        });
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Checked out from geofence. Total time: $totalTimeInGeofence mins.',
+          ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('You are outside the geofence area.')),
+      );
+    }
+  }
+}
+
 
   @override
   Widget build(BuildContext context) {
