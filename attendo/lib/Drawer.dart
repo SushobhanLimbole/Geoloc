@@ -1,8 +1,9 @@
 import 'package:attendo/Constants.dart';
 import 'package:attendo/Pages/AttendanceLogs.dart';
+import 'package:attendo/Pages/DailyRecordsPage.dart';
 import 'package:attendo/Pages/FAQsPage.dart';
 import 'package:attendo/Pages/HelpPage.dart';
-import 'package:attendo/Pages/MyProfilePage.dart';
+// import 'package:attendo/Pages/MyProfilePage.dart';
 import 'package:attendo/Pages/RequestAttendance.dart';
 import 'package:attendo/Pages/SetGeofenceArea.dart';
 import 'package:attendo/Pages/ShiftManagementPage.dart';
@@ -86,21 +87,22 @@ class _AppDrawerState extends State<AppDrawer> {
                     ),
                   ),
           ),
+          isAdmin ? 
           ListTile(
             leading: const Icon(
-              Icons.person,
+              Icons.event_available,
               color: secondaryColor,
             ),
-            title: Text('My Profile',
+            title: Text('Daily Attendance',
                 style: GoogleFonts.poppins(
                   color: secondaryColor,
                 )),
             onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => MyProfilePage(userName: userName,),
+                  builder: (context) => DailyRecordsPage(userEmail: userEmail,),
                 )),
-          ),
+          ) : Container(),
           ListTile(
             leading: const Icon(
               Icons.event,
@@ -164,23 +166,23 @@ class _AppDrawerState extends State<AppDrawer> {
                       )),
                 )
               : Container(),
-              // isAdmin
-              // ? ListTile(
-              //     leading: const Icon(
-              //       Icons.schedule,
-              //       color: secondaryColor,
-              //     ),
-              //     title: Text('Set Shift Time',
-              //         style: GoogleFonts.poppins(
-              //           color: secondaryColor,
-              //         )),
-              //     onTap: () => Navigator.push(
-              //         context,
-              //         MaterialPageRoute(
-              //           builder: (context) => ShiftManagementPage(),
-              //         )),
-              //   )
-              // : Container(),
+              isAdmin
+              ? ListTile(
+                  leading: const Icon(
+                    Icons.schedule,
+                    color: secondaryColor,
+                  ),
+                  title: Text('Set Shift Time',
+                      style: GoogleFonts.poppins(
+                        color: secondaryColor,
+                      )),
+                  onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ShiftManagementPage(),
+                      )),
+                )
+              : Container(),
           // const Divider(),
           ListTile(
             leading: const Icon(

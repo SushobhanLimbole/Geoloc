@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:latlong2/latlong.dart';
 
 class RequestAttendance extends StatefulWidget {
   const RequestAttendance(
@@ -40,6 +42,11 @@ class _RequestAttendanceState extends State<RequestAttendance> {
       final monthKey = DateFormat('yyyy_MM').format(DateTime.now());
       final dayKey = DateFormat('dd').format(DateTime.now());
 
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      LatLng userLocation = LatLng(position.latitude, position.longitude);
+
       // Unique ID for the attendance request within the dailyRequests collection
       String attendanceId =
           FirebaseFirestore.instance.collection('attendanceRecords').doc().id;
@@ -53,17 +60,19 @@ class _RequestAttendanceState extends State<RequestAttendance> {
         'attendanceId': attendanceId,
         'userEmail': userEmail,
         'userName': userName,
-        'checkInTime': null, // For requests, check-in time is initially empty
+        'checkInTime': DateFormat('HH:mm').format(DateTime.now()).toString(), // For requests, check-in time is initially empty
         'checkOutTime': null, // For requests, check-out time is initially empty
-        'geoPoint': '', // Not needed for requests
+        'geoPoint': userLocation.toString(), 
         'status': 'Pending', // Set status to "Pending" for manual requests
         'validAttendance': false,
         'isManualEntry': true,
         'isPendingVerification': true,
         'verifiedBy': '',
         'reason': reason,
-        'totalTimeInGeofence': '',
-        'date': DateFormat('yyyy-MM-dd').format(DateTime.now()).toString() // Current date
+        'totalTimeInGeofence': 0,
+        'date': DateFormat('yyyy-MM-dd')
+            .format(DateTime.now())
+            .toString() // Current date
       };
 
       // Reference to the correct monthly document and dailyRequests subcollection

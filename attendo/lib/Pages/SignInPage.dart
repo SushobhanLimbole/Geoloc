@@ -20,9 +20,9 @@ class _SignInPageState extends State<SignInPage> {
   final TextEditingController confirmPasswordController =
       TextEditingController();
 
-  final List<String> roles = ['admin', 'employee'];
+  // final List<String> roles = ['admin', 'employee'];
 
-  String? selectedRole;
+  // String? selectedRole;
 
   bool _isPasswordVisible = true;
 
@@ -42,7 +42,7 @@ class _SignInPageState extends State<SignInPage> {
           Text('Checking user role, please wait...'),
         ],
       ),
-      duration: Duration(seconds: 5),
+      duration: Duration(seconds: 2),
     );
     ScaffoldMessenger.of(context).showSnackBar(loadingSnackBar);
 
@@ -61,7 +61,7 @@ class _SignInPageState extends State<SignInPage> {
         DocumentSnapshot userDoc = userSnapshot.docs.first;
         String userRole = userDoc['role'] ?? 'employee';
 
-        if (userRole == selectedRole) {
+        // if (userRole == selectedRole) {
           // Role is valid, proceed with login
           User? user = await _auth
               .signInWithEmailAndPassword(
@@ -87,12 +87,12 @@ class _SignInPageState extends State<SignInPage> {
               ),
             );
           }
-        } else {
-          // If the role doesn't match, show an error
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Role does not match.')),
-          );
-        }
+        // } else {
+        //   // If the role doesn't match, show an error
+        //   ScaffoldMessenger.of(context).showSnackBar(
+        //     SnackBar(content: Text('Role does not match.')),
+        //   );
+        // }
       } else {
         // If no user is found with the provided email
         ScaffoldMessenger.of(context).showSnackBar(
@@ -227,40 +227,40 @@ class _SignInPageState extends State<SignInPage> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 16.0),
+                // const SizedBox(height: 16.0),
 
                 // Role Dropdown
-                DropdownButtonFormField<String>(
-                  value: selectedRole,
-                  items: roles.map((role) {
-                    return DropdownMenuItem<String>(
-                      value: role,
-                      child: Text(role),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      selectedRole = value;
-                    });
-                  },
-                  decoration: InputDecoration(
-                    labelText: 'Select Role',
-                    labelStyle: GoogleFonts.poppins(),
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(30)),
-                    prefixIcon: const Padding(
-                      padding: EdgeInsets.all(5),
-                      child: Icon(Icons.person),
-                    ),
-                  ),
-                  validator: (value) {
-                    // Validate if a role is selected
-                    if (value == null) {
-                      return 'Please select a role';
-                    }
-                    return null;
-                  },
-                ),
+                // DropdownButtonFormField<String>(
+                //   value: selectedRole,
+                //   items: roles.map((role) {
+                //     return DropdownMenuItem<String>(
+                //       value: role,
+                //       child: Text(role),
+                //     );
+                //   }).toList(),
+                //   onChanged: (value) {
+                //     setState(() {
+                //       selectedRole = value;
+                //     });
+                //   },
+                //   decoration: InputDecoration(
+                //     labelText: 'Select Role',
+                //     labelStyle: GoogleFonts.poppins(),
+                //     border: OutlineInputBorder(
+                //         borderRadius: BorderRadius.circular(30)),
+                //     prefixIcon: const Padding(
+                //       padding: EdgeInsets.all(5),
+                //       child: Icon(Icons.person),
+                //     ),
+                //   ),
+                //   validator: (value) {
+                //     // Validate if a role is selected
+                //     if (value == null) {
+                //       return 'Please select a role';
+                //     }
+                //     return null;
+                //   },
+                // ),
                 const SizedBox(height: 25.0),
 
                 Row(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ShiftManagementPage extends StatefulWidget {
   const ShiftManagementPage({super.key});
@@ -9,10 +10,97 @@ class ShiftManagementPage extends StatefulWidget {
 }
 
 class _ShiftManagementPageState extends State<ShiftManagementPage> {
-  List<Map<String, String>> shifts = [];
+  Map<String, String> shift = {};
   TimeOfDay? startTime;
   TimeOfDay? endTime;
   final TextEditingController shiftNameController = TextEditingController();
+  final String shiftDocName = "test_slot";
+
+  /// Upload shift to Firestore
+  Future<void> uploadShiftToFirestore(Map<String, String> shiftData) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('shifts')
+          .doc(shiftDocName)
+          .set(shiftData, SetOptions(merge: true));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "Shift uploaded successfully!",
+            style: GoogleFonts.poppins(),
+          ),
+        ),
+      );
+      fetchShiftFromFirestore();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "Failed to upload shift: $e",
+            style: GoogleFonts.poppins(),
+          ),
+        ),
+      );
+    }
+  }
+
+  /// Delete the shift from Firestore
+  Future<void> deleteShiftFromFirestore() async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('shifts')
+          .doc(shiftDocName)
+          .delete();
+      setState(() {
+        shift.clear();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "Shift deleted successfully!",
+            style: GoogleFonts.poppins(),
+          ),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "Failed to delete shift: $e",
+            style: GoogleFonts.poppins(),
+          ),
+        ),
+      );
+    }
+  }
+
+  /// Fetch shift from Firestore
+  Future<void> fetchShiftFromFirestore() async {
+    try {
+      final docSnapshot = await FirebaseFirestore.instance
+          .collection('shifts')
+          .doc(shiftDocName)
+          .get();
+      if (docSnapshot.exists) {
+        setState(() {
+          shift = Map<String, String>.from(docSnapshot.data() ?? {});
+        });
+      } else {
+        setState(() {
+          shift.clear();
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "Failed to fetch shift: $e",
+            style: GoogleFonts.poppins(),
+          ),
+        ),
+      );
+    }
+  }
 
   void showAddShiftModal(BuildContext context) {
     startTime = null;
@@ -40,7 +128,6 @@ class _ShiftManagementPageState extends State<ShiftManagementPage> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Drag handle at the top
                       Center(
                         child: Container(
                           width: 40,
@@ -52,7 +139,6 @@ class _ShiftManagementPageState extends State<ShiftManagementPage> {
                           ),
                         ),
                       ),
-                      // Shift Name Text Field
                       TextField(
                         controller: shiftNameController,
                         decoration: InputDecoration(
@@ -63,7 +149,6 @@ class _ShiftManagementPageState extends State<ShiftManagementPage> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      // Start time picker
                       ElevatedButton(
                         onPressed: () async {
                           final selectedTime = await showTimePicker(
@@ -84,7 +169,6 @@ class _ShiftManagementPageState extends State<ShiftManagementPage> {
                         ),
                       ),
                       const SizedBox(height: 10),
-                      // End time picker
                       ElevatedButton(
                         onPressed: () async {
                           final selectedTime = await showTimePicker(
@@ -105,19 +189,19 @@ class _ShiftManagementPageState extends State<ShiftManagementPage> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      // Add Shift Button
                       ElevatedButton(
                         onPressed: () {
                           if (shiftNameController.text.isNotEmpty &&
                               startTime != null &&
                               endTime != null) {
                             setState(() {
-                              shifts.add({
+                              shift = {
                                 "name": shiftNameController.text,
                                 "start": startTime!.format(context),
                                 "end": endTime!.format(context),
-                              });
+                              };
                             });
+                            uploadShiftToFirestore(shift);
                             Navigator.pop(context);
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -148,76 +232,66 @@ class _ShiftManagementPageState extends State<ShiftManagementPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    fetchShiftFromFirestore();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Shift Management"),
+        title: const Text("Shift Management"),
         leading: IconButton(
             onPressed: () => Navigator.pop(context),
-            icon: Icon(Icons.arrow_back_ios)),
+            icon: const Icon(Icons.arrow_back_ios)),
         actions: [
           IconButton(
-            icon: Icon(Icons.add),
+            icon: const Icon(Icons.add),
             onPressed: () => showAddShiftModal(context),
           ),
         ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: shifts.isNotEmpty
-            ? ListView.builder(
-                itemCount: shifts.length,
-                itemBuilder: (context, index) {
-                  final shift = shifts[index];
-                  return GestureDetector(
-                    onLongPress: () {
-                      setState(() {
-                        shifts.removeAt(index);
-                      });
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            "Shift Deleted",
-                            style: GoogleFonts.poppins(),
-                          ),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 10,
-                            offset: Offset(0, 5),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            "${shift["name"]}: ${shift["start"]} - ${shift["end"]}",
-                            style: GoogleFonts.poppins(
-                                fontSize: 16, color: Colors.black87),
-                          ),
-                          const Icon(
-                            Icons.schedule,
-                            color: Colors.blueAccent,
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
+        child: shift.isNotEmpty
+            ? GestureDetector(
+                onLongPress: () {
+                  deleteShiftFromFirestore();
                 },
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "${shift["name"]}: ${shift["start"]} - ${shift["end"]}",
+                        style: GoogleFonts.poppins(
+                            fontSize: 16, color: Colors.black87),
+                      ),
+                      const Icon(
+                        Icons.schedule,
+                        color: Colors.blueAccent,
+                      ),
+                    ],
+                  ),
+                ),
               )
             : const Center(
                 child: Text(
-                  "No shifts added yet",
+                  "No shift added yet",
                   style: TextStyle(color: Colors.black54),
                 ),
               ),
